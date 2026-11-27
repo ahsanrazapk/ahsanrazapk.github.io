@@ -4,10 +4,11 @@ Personal portfolio of **Ahsan Raza**, Senior Flutter & Android Developer.
 
 Live: **https://ahsanrazapk.github.io**
 
-- Apple-style glass UI with light and dark themes
-- Hand-written HTML, CSS and JavaScript: no framework, no build step
-- Animations: letter-by-letter hero, 3D portrait tilt, scroll reveals, FLIP project filters,
-  view-transition project popups and a circular theme switch
+- Ink neutrals and one "connected" green, in light and dark themes
+- Plain HTML, CSS and JavaScript: no framework, no build step
+- The portrait is a call tile with a live status line (availability, Lahore's clock, a call timer)
+- Motion only where it explains something: one entrance on load, FLIP project filters and
+  view-transition project popups
 - Respects `prefers-reduced-motion`
 
 ## Edit
