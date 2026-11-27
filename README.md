@@ -7,8 +7,11 @@ Live: **https://ahsanrazapk.github.io**
 - Ink neutrals and one "connected" green, in light and dark themes
 - Plain HTML, CSS and JavaScript: no framework, no build step
 - The portrait is a call tile with a live status line (availability, Lahore's clock, a call timer)
-- Motion only where it explains something: one entrance on load, FLIP project filters and
-  view-transition project popups
+- Motion follows the call idea: the tile connects on load, the lead is transcribed word by word,
+  a voice meter and speaker ring answer scrolling, rows light up as they cross the middle of the
+  screen, posters stream in and lean toward the pointer, and the contact panel has a listening
+  waveform. Plus FLIP project filters, view-transition popups and a circular theme switch.
+- All hidden start states sit under `.motion` (set in `<head>`), so the page is complete without JS
 - Respects `prefers-reduced-motion`
 
 ## Edit

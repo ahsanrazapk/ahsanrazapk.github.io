@@ -60,7 +60,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* the one entrance: hero text and call tile fade and rise once on load */
-@keyframes enter { from { opacity: 0; transform: translateY(8px); } }
+/* uses translate, not transform, so it composes with the pointer tilt on the call tile */
+@keyframes enter { from { opacity: 0; translate: 0 8px; } }
 @keyframes fade { from { opacity: 0; } }
 
 /* ---------- buttons ---------- */
@@ -70,7 +71,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease), transform var(--fast) var(--ease);
 }
 .btn:active { transform: scale(.98); }
-.btn svg { width: 16px; height: 16px; flex: none; }
+.btn svg { width: 16px; height: 16px; flex: none; transition: transform var(--fast) var(--ease); }
+.btn[href^="https"]:hover svg { transform: translate(2px, -2px); } /* ↗ leaves */
+.btn[href^="#"]:hover svg { transform: translateY(2px); }          /* ↓ points */
 .btn-primary { color: var(--bg); background: var(--text); }
 .btn-primary:hover { background: color-mix(in srgb, var(--text) 86%, var(--bg)); }
 .btn-ghost { background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); }
@@ -78,13 +81,19 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .btn-sm { height: 32px; padding: 0 12px; font-size: 14px; }
 
 /* ---------- nav ---------- */
-.nav-wrap { position: fixed; inset: 0 0 auto; z-index: 50; background: var(--bg); border-bottom: 1px solid var(--line); }
+.nav-wrap { position: fixed; inset: 0 0 auto; z-index: 50; background: var(--bg); border-bottom: 1px solid var(--line); transition: transform 300ms var(--ease); }
+.nav-wrap.hide { transform: translateY(-100%); } /* steps aside while scrolling down, returns on the way up */
 .nav { max-width: var(--maxw); margin: 0 auto; height: var(--nav-h); padding: 0 var(--gutter); display: flex; align-items: center; gap: 8px; }
 .brand {
   width: 28px; height: 28px; margin-right: auto; border-radius: 6px; display: grid; place-items: center;
   font: 500 12px/1 var(--mono); color: var(--bg); background: var(--text);
 }
-.links { display: flex; gap: 4px; }
+.links { position: relative; display: flex; gap: 4px; }
+/* a 1px line that JS scales to the active link's width and slides under it, on the nav's bottom edge */
+.indicator {
+  position: absolute; left: 0; bottom: -12px; width: 1px; height: 2px; background: var(--accent); transform-origin: 0 50%; opacity: 0;
+  transition: transform 500ms var(--ease), opacity 200ms var(--ease);
+}
 .links a { display: grid; place-items: center; height: 32px; padding: 0 12px; border-radius: 8px; font-size: 14px; color: var(--text-2); transition: color var(--fast) var(--ease); }
 .links a:hover, .links a.active { color: var(--text); }
 .icon-btn {
@@ -125,10 +134,20 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .call-tile {
   position: relative; justify-self: end; width: 100%; max-width: 560px; aspect-ratio: 4 / 3; overflow: hidden;
   border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(var(--raised), var(--card));
+  /* --tx/--ty (-1..1) follow the pointer; --lvl (0..1) is the voice level, both set from main.js */
+  transform: perspective(1200px) rotateX(calc(var(--ty, 0) * -4deg)) rotateY(calc(var(--tx, 0) * 5deg));
+  transition: transform 600ms var(--ease);
+}
+/* active-speaker ring, as on a call: it lights up while the tile is "talking" */
+.call-tile::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--accent); opacity: var(--lvl, 0);
 }
 /* the cutout's shoulders reach its own left and right edges, so those edges fade into the tile */
 .call-tile img {
   position: absolute; left: 12%; top: 32px; width: 76%;
+  translate: calc(var(--tx, 0) * -8px) calc(var(--ty, 0) * -6px); /* drifts against the tilt, for depth */
+  transition: translate 600ms var(--ease), filter 1000ms var(--ease), opacity 1000ms var(--ease), scale 1000ms var(--ease);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 }
@@ -137,8 +156,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   font: 400 12px/16px var(--mono); color: var(--text-2);
 }
 .live { display: inline-flex; align-items: center; gap: 8px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
-.call-timer { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; transition: background-color 300ms var(--ease); }
+.call-timer { color: var(--text-3); font-variant-numeric: tabular-nums; transition: opacity 400ms var(--ease); }
+/* voice meter beside the name; main.js drives each bar's --v while the tile is "talking" */
+.meter { display: inline-flex; align-items: center; align-self: center; gap: 2px; height: 12px; }
+.meter i { width: 2px; height: 12px; border-radius: 1px; background: var(--accent); transform: scaleY(var(--v, .25)); }
 .call-name {
   position: absolute; left: 16px; bottom: 16px; z-index: 1; display: flex; align-items: baseline; gap: 8px; padding: 4px 8px;
   border-radius: 6px; background: var(--bg-deep); font-size: 13px; line-height: 20px; font-weight: 500;
@@ -184,17 +206,37 @@ h2 .dim { color: var(--text-3); }
 .card {
   /* flex column: a button centers its content vertically, which left the posters in a row at different heights */
   display: flex; flex-direction: column; width: 100%; padding: 8px; border-radius: 16px; text-align: left; background: var(--card); border: 1px solid var(--line);
-  transition: background-color var(--fast) var(--ease);
+  /* tilt uses transform, the scroll reveal uses translate and press uses scale, so the three never fight.
+     --rx/--ry/--px/--py/--mx/--my follow the pointer (main.js); --d staggers the reveal. */
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: background-color var(--fast) var(--ease), transform 200ms var(--ease), scale var(--fast) var(--ease),
+    opacity 500ms var(--ease) var(--d, 0s), translate 700ms var(--ease) var(--d, 0s);
 }
-.card:hover { background: var(--raised); }
+.card:active { scale: .985; }
 .card.is-hidden { display: none; }
 .card .shot { position: relative; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; background: var(--raised); }
-.card .shot img { width: 100%; height: 100%; object-fit: cover; }
+.card .shot img {
+  width: 100%; height: 100%; object-fit: cover;
+  transform: translate(var(--px, 0), var(--py, 0)) scale(var(--zoom, 1));
+  transition: transform 300ms var(--ease), clip-path 900ms var(--ease) var(--d, 0s), scale 1200ms var(--ease) var(--d, 0s);
+}
+/* soft light under the pointer */
+.card .shot::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 300ms var(--ease);
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgb(255 255 255 / .12), transparent 60%);
+}
+@media (hover: hover) {
+  .card:hover { background: var(--raised); --zoom: 1.06; }
+  .card:hover .shot::after { opacity: 1; }
+  /* the poster under the pointer keeps its color, the rest of the grid steps back */
+  .work-grid:has(.card:hover) .card:not(:hover) { opacity: .5; }
+}
 .card .open {
   position: absolute; right: 8px; bottom: 8px; padding: 4px 8px; border-radius: 6px; font-size: 12px; line-height: 16px; font-weight: 500;
-  color: #eef0f5; background: rgb(7 8 13 / .8); opacity: 0; transition: opacity var(--fast) var(--ease);
+  color: #eef0f5; background: rgb(7 8 13 / .8); opacity: 0; translate: 0 8px;
+  transition: opacity 200ms var(--ease), translate 200ms var(--ease);
 }
-.card:hover .open, .card:focus-visible .open { opacity: 1; }
+.card:hover .open, .card:focus-visible .open { opacity: 1; translate: 0 0; }
 .card .body { padding: 16px 8px 12px; }
 .card .cat { font: 400 12px/16px var(--mono); color: var(--text-3); }
 .card h3 { margin-top: 8px; font-size: 16px; line-height: 24px; font-weight: 500; }
@@ -252,6 +294,114 @@ footer {
 }
 footer a { transition: color var(--fast) var(--ease); }
 footer a:hover { color: var(--text); }
+
+/* =========================================================
+   Motion. The page behaves like a live call: it connects, the lead is
+   transcribed word by word, a voice meter answers scrolling, and each row
+   lights up as it is "said".
+   Hidden start states apply only under .motion, which the head script sets
+   when JS runs and the visitor has not asked for reduced motion.
+   ========================================================= */
+
+/* ----- hero: letters rise, the call connects, the lead is transcribed ----- */
+.hero-name { overflow: hidden; padding-bottom: .1em; margin-bottom: -.1em; }
+.motion .hero-name:not(.split), .motion .hero-lead:not(.split) { opacity: 0; } /* until main.js has split them */
+.motion .hero-text > :nth-child(2) { animation-delay: 350ms; } /* the name leads, the rest follows it */
+.motion .hero-text > :nth-child(3) { animation-delay: 450ms; }
+.motion .hero-text > :nth-child(4) { animation-delay: 550ms; }
+.hero-name .ch { display: inline-block; animation: ch-up 800ms var(--ease) both; animation-delay: calc(var(--i) * 40ms + 100ms); }
+@keyframes ch-up { from { translate: 0 110%; } }
+.hero-lead .w { opacity: .3; transition: opacity 400ms var(--ease); }
+.hero-lead .w.on { opacity: 1; }
+
+.motion .call-tile:not(.connected) img { filter: blur(16px) saturate(.4); opacity: .4; scale: 1.08; }
+.motion .call-tile:not(.connected) .dot { background: var(--text-3); animation: ringing 900ms var(--ease) infinite; }
+.motion .call-tile:not(.connected) .live-text { font-size: 0; }
+.motion .call-tile:not(.connected) .live-text::before { content: "Connecting"; font-size: 12px; }
+.motion .call-tile:not(.connected) .call-timer { opacity: 0; }
+.call-tile.connected .live-text { animation: fade 400ms var(--ease); }
+@keyframes ringing { 50% { opacity: .25; } }
+
+/* ----- scroll reveals: main.js adds .in when an element enters the screen ----- */
+.motion .tech > div { opacity: 0; translate: 0 12px; transition: opacity 600ms var(--ease), translate 600ms var(--ease); }
+.motion .tech.in > div { opacity: 1; translate: 0 0; transition-delay: var(--d, 0ms); }
+.motion .tech.in > div:nth-child(2) { transition-delay: calc(var(--d, 0ms) + 60ms); }
+.motion .tech.in > div:nth-child(3) { transition-delay: calc(var(--d, 0ms) + 120ms); }
+.motion .tech.in > div:nth-child(4) { transition-delay: calc(var(--d, 0ms) + 180ms); }
+
+/* headings: each line rises out of its own mask; the mono label decodes (see decode() in main.js) */
+h2 .line { display: block; overflow: hidden; padding-bottom: .15em; margin-bottom: -.15em; }
+h2 .line > span { display: block; transition: translate 900ms var(--ease); }
+.motion :is(.sec-head, .contact):not(.in) .line > span { translate: 0 110%; }
+h2 .line:nth-child(2) > span { transition-delay: 90ms; }
+.motion :is(.sec-head, .contact) .eyebrow { transition: opacity 300ms var(--ease); }
+.motion :is(.sec-head, .contact):not(.in) .eyebrow { opacity: 0; }
+.eyebrow.scr { position: relative; color: transparent; }
+.eyebrow.scr::after { content: attr(data-s); position: absolute; left: 0; top: 0; color: var(--text-3); white-space: pre; }
+.motion .sec-head p { transition: opacity 600ms var(--ease) 200ms, translate 600ms var(--ease) 200ms; }
+.motion .sec-head:not(.in) p { opacity: 0; translate: 0 12px; }
+.motion :is(.filters, .edu-label) { transition: opacity 600ms var(--ease), translate 600ms var(--ease); }
+.motion :is(.filters, .edu-label):not(.in) { opacity: 0; translate: 0 12px; }
+
+/* rows: the hairline draws from the left, then the columns rise one after another */
+.motion :is(.row, .job) { position: relative; border-bottom-color: transparent; }
+.motion :is(.row, .job)::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: var(--line);
+  transform-origin: 0 50%; transition: transform 900ms var(--ease);
+}
+.motion :is(.row, .job):not(.in)::after { transform: scaleX(0); }
+.motion :is(.row, .job) > * { transition: opacity 600ms var(--ease), translate 600ms var(--ease); }
+.motion :is(.row, .job) > :nth-child(2) { transition-delay: 80ms; }
+.motion :is(.row, .job) > :nth-child(3) { transition-delay: 160ms; }
+.motion :is(.row, .job):not(.in) > * { opacity: 0; translate: 0 16px; }
+
+/* transcript focus: while a list crosses the middle of the screen, the row there is the one being
+   said, and the other rows' descriptions step back. Titles stay at full strength. */
+.motion :is(.row div > p, .row .tags, .job .org) { transition: opacity 600ms var(--ease); }
+.motion :is(.rows, .jobs).focus :is(.row, .job).in:not(.live, :hover) :is(p, .tags, .org, ul) { opacity: .6; }
+
+/* cards: the poster streams in from the bottom edge and settles */
+.motion .card:not(.in) { opacity: 0; translate: 0 24px; }
+.motion .card:not(.in) .shot img { clip-path: inset(100% 0 0 0); scale: 1.15; }
+.card.in .shot img { clip-path: inset(0); }
+
+/* contact: the panel rises, its lines follow, and a listening waveform answers the pointer */
+.motion .contact { transition: opacity 700ms var(--ease), translate 700ms var(--ease); }
+.motion .contact:not(.in) { opacity: 0; translate: 0 24px; }
+.motion .contact :is(.lead, .actions, .contact-meta > div) { transition: opacity 600ms var(--ease) 200ms, translate 600ms var(--ease) 200ms; }
+.motion .contact .actions { transition-delay: 280ms; }
+.motion .contact-meta > div:nth-child(1) { transition-delay: 240ms; }
+.motion .contact-meta > div:nth-child(2) { transition-delay: 300ms; }
+.motion .contact-meta > div:nth-child(3) { transition-delay: 360ms; }
+.motion .contact-meta > div:nth-child(4) { transition-delay: 420ms; }
+.motion .contact:not(.in) :is(.lead, .actions, .contact-meta > div) { opacity: 0; translate: 0 12px; }
+.wave { grid-column: 1 / -1; display: block; width: 100%; height: 56px; }
+
+/* popup: details follow the poster in */
+.motion .modal[open] .m-body > * { animation: enter 500ms var(--ease) 150ms both; }
+.motion .modal[open] .m-body > :nth-child(2) { animation-delay: 190ms; }
+.motion .modal[open] .m-body > :nth-child(3) { animation-delay: 230ms; }
+.motion .modal[open] .m-body > :nth-child(4) { animation-delay: 270ms; }
+.motion .modal[open] .m-body > :nth-child(5) { animation-delay: 310ms; }
+.motion .modal[open] .m-body > :nth-child(6) { animation-delay: 350ms; }
+.motion .modal[open] .m-body > :nth-child(7) { animation-delay: 390ms; }
+
+/* theme switch: the new theme grows out of the toggle as a circle (main.js animates the clip) */
+.theme-vt::view-transition-old(root), .theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
+/* scroll ruler in the right margin: a green mark travels down the ticks, labelled with the section */
+.ruler { display: none; }
+@media (min-width: 1400px) {
+  .motion .ruler {
+    display: block; position: fixed; right: 16px; top: 50%; z-index: 40; width: 8px; height: 192px; translate: 0 -50%; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--text) 24%, transparent) 0 1px, transparent 1px 8px);
+  }
+  .ruler i { position: absolute; right: 0; top: 0; width: 16px; height: 2px; background: var(--accent); transform: translateY(calc(var(--p, 0) * 190px)); }
+  .ruler span {
+    position: absolute; right: 24px; top: 0; font: 400 12px/16px var(--mono); color: var(--text-3); white-space: nowrap;
+    transform: translateY(calc(var(--p, 0) * 190px - 7px));
+  }
+}
 
 /* ---------- responsive ---------- */
 @media (max-width: 1080px) {

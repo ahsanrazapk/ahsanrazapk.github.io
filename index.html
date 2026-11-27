@@ -29,6 +29,12 @@
     if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
     else if (matchMedia('(prefers-color-scheme: light)').matches) document.documentElement.dataset.theme = 'light';
   } catch (e) {}
+  // Motion start states (hidden until revealed) apply only under .motion. If main.js
+  // never runs, drop the class after 3s so nothing stays hidden.
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.documentElement.classList.add('motion');
+    setTimeout(function () { if (!window.__motion) document.documentElement.classList.remove('motion'); }, 3000);
+  }
 </script>
 <script type="application/ld+json">
 {
@@ -100,11 +106,11 @@
       <!-- the portrait as a call tile -->
       <div class="call-tile">
         <div class="call-top">
-          <span class="live"><i class="dot"></i>Available for new projects</span>
+          <span class="live"><i class="dot"></i><span class="live-text">Available for new projects</span></span>
           <span class="call-timer" aria-hidden="true">00:00</span>
         </div>
         <img src="assets/img/ahsan.webp" alt="Ahsan Raza" width="820" height="1055" fetchpriority="high">
-        <span class="call-name">Ahsan Raza<small>Lahore <span class="local-time">UTC+5</span></small></span>
+        <span class="call-name"><i class="meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></i>Ahsan Raza<small>Lahore <span class="local-time">UTC+5</span></small></span>
       </div>
     </div>
 
