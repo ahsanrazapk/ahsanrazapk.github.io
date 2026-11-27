@@ -399,9 +399,17 @@ h2 .line:nth-child(2) > span { transition-delay: 90ms; }
 .ruler { display: none; }
 @media (min-width: 1400px) {
   .motion .ruler {
-    display: block; position: fixed; right: 16px; top: 50%; z-index: 40; width: 8px; height: 192px; translate: 0 -50%; pointer-events: none;
+    display: block; position: fixed; right: 16px; top: 50%; z-index: 40; width: 8px; height: 192px; translate: 0 -50%;
+    cursor: pointer; touch-action: none; /* it is also a scrubber: click to travel, drag to scrub (main.js) */
     background: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--text) 24%, transparent) 0 1px, transparent 1px 8px);
   }
+  .ruler::before { content: ""; position: absolute; inset: -12px -16px -12px -24px; } /* a hit area wider than the 8px of ticks */
+  /* a faint line under the pointer shows where a click will land */
+  .ruler::after {
+    content: ""; position: absolute; right: 0; top: 0; width: 12px; height: 1px; background: var(--text-2); opacity: 0;
+    transform: translateY(calc(var(--h, 0) * 190px)); transition: opacity var(--fast) var(--ease);
+  }
+  .ruler:hover::after { opacity: 1; }
   .ruler i { position: absolute; right: 0; top: 0; width: 16px; height: 2px; background: var(--accent); transform: translateY(calc(var(--p, 0) * 190px)); }
   .ruler span {
     position: absolute; right: 24px; top: 0; font: 400 12px/16px var(--mono); color: var(--text-3); white-space: nowrap;

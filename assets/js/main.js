@@ -188,6 +188,29 @@
         speak(Math.min(0.6, Math.abs(dy) / 300));
       });
     }, { passive: true });
+    // the ruler is also a scrubber: a click travels there smoothly, a drag scrubs the page directly
+    const rulerAt = (e) => {
+      const r = ruler.getBoundingClientRect();
+      return clamp((e.clientY - r.top) / r.height, 0, 1);
+    };
+    const rulerGo = (e, behavior) => scrollTo({ top: rulerAt(e) * (root.scrollHeight - innerHeight), behavior });
+    let downY = 0;
+    let scrubbing = false;
+    ruler.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); // no text selection while dragging
+      ruler.setPointerCapture(e.pointerId);
+      downY = e.clientY;
+      scrubbing = false;
+      rulerGo(e, 'smooth');
+    });
+    ruler.addEventListener('pointermove', (e) => {
+      ruler.style.setProperty('--h', rulerAt(e).toFixed(4));
+      if (!e.buttons) return;
+      // a few pixels of slack, so a click with a shaky hand still gets its smooth travel
+      if (!scrubbing && Math.abs(e.clientY - downY) > 4) scrubbing = true;
+      if (scrubbing) rulerGo(e, 'instant');
+    });
+
     addEventListener('resize', moveIndicator);
     if (document.fonts) document.fonts.ready.then(moveIndicator);
 
