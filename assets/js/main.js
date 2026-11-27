@@ -363,8 +363,23 @@
   /* ---------- project popup (image morphs from the card) ---------- */
   const data = JSON.parse($('#work-data').textContent);
   const modal = $('#project-modal');
-  const mImg = $('.m-shot img', modal);
+  const mShot = $('.m-shot', modal);
+  const mImg = $('img', mShot);
+  const mBody = $('.m-body', modal);
   let current = 0;
+  // details follow the poster in: rising on open (dir 0), sliding from the side you step toward (dir ±1)
+  function playBody(dir) {
+    if (!motion) return;
+    [...mBody.children].filter((el) => !dir || !el.matches('.nav-row')).forEach((el, i) => {
+      el.animate(
+        [{ opacity: 0, translate: dir ? `${dir * 24}px 0` : '0 16px' }, { opacity: 1, translate: '0 0' }],
+        { duration: 500, delay: (dir ? 0 : 150) + i * 45, easing: EASE, fill: 'backwards' }
+      );
+    });
+    $$('.skills span', mBody).forEach((el, i) => {
+      el.animate([{ opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1 }], { duration: 400, delay: (dir ? 200 : 400) + i * 50, easing: EASE, fill: 'backwards' });
+    });
+  }
   const cardImg = (i) => {
     const c = cards.find((x) => +x.dataset.i === i);
     return c && !c.classList.contains('is-hidden') ? $('img', c) : null;
@@ -400,11 +415,14 @@
       span.textContent = s;
       skills.appendChild(span);
     });
+    mBody.scrollTop = 0;
+    mBody.parentElement.scrollTop = 0; // on narrow screens the whole panel is the scroller
   }
   function openModal(i) {
+    mShot.style.backgroundImage = '';
     fill(i);
     const from = cardImg(i);
-    const show = () => { modal.showModal(); document.body.style.overflow = 'hidden'; };
+    const show = () => { modal.showModal(); document.body.style.overflow = 'hidden'; playBody(0); };
     if (!canVT || !from) { modal.classList.remove('vt'); show(); return; }
     modal.classList.add('vt');
     from.style.viewTransitionName = 'shot';
@@ -433,7 +451,25 @@
   modal.addEventListener('cancel', (e) => { e.preventDefault(); closeModal(); });
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
   $('.close', modal).addEventListener('click', closeModal);
-  const step = (dir) => fill((current + dir + data.length) % data.length);
+  // Previous / Next: the new poster wipes in over the old one from the side you step toward
+  function step(dir) {
+    const i = (current + dir + data.length) % data.length;
+    if (!motion) { fill(i); return; }
+    const old = mImg.currentSrc || mImg.src;
+    current = i; // claimed now, so a second press during the decode steps on from here
+    const pre = new Image();
+    pre.src = `assets/img/work/${data[i].slug}.webp`;
+    pre.decode().catch(() => {}).then(() => {
+      if (current !== i) return; // a later press has taken over
+      mShot.style.backgroundImage = `url("${old}")`;
+      fill(i);
+      mImg.animate(
+        [{ clipPath: dir > 0 ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)', transform: `translateX(${dir * 32}px)` }, { clipPath: 'inset(0)', transform: 'none' }],
+        { duration: 600, easing: EASE }
+      );
+      playBody(dir);
+    });
+  }
   $('.prev', modal).addEventListener('click', () => step(-1));
   $('.next', modal).addEventListener('click', () => step(1));
   modal.addEventListener('keydown', (e) => {
